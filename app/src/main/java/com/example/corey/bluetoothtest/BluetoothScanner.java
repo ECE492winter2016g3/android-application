@@ -27,9 +27,13 @@ public class BluetoothScanner implements Runnable {
 
         int count = 0;
 
-        while(true) {
+        boolean socketOpen = true;
+        while(socketOpen) {
             try {
                 count = input.read(buf);
+                if(count == 0) {
+                    continue;
+                }
                 String recvd = new String(Arrays.copyOfRange(buf, 0, count));
 
                 Log.i("BluetoothScanner", "Received packet: " + recvd);
@@ -42,7 +46,9 @@ public class BluetoothScanner implements Runnable {
                 handler.sendMessage(m);
             } catch (java.io.IOException e) {
                 Log.e("BluetoothScanner", e.getMessage());
+                socketOpen = false;
             }
         }
+        Log.i("BluetoothScanner", "Done!");
     }
 }
