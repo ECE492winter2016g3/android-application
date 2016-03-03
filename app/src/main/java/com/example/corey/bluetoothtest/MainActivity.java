@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private InputStream is;
     private BluetoothSocket s;
 
-    private BluetoothManager bluetooth;
+    private BluetoothApplication app;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,8 +42,10 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        app = (BluetoothApplication) getApplicationContext();
+
         devices = new ArrayList<BluetoothDevice>();
-        bluetooth = new BluetoothManager();
+        app.bluetooth = new BluetoothManager();
 
         scan();
 
@@ -64,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         Button disconnect = (Button) findViewById(R.id.disconnect);
         disconnect.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                bluetooth.disconnect();
+                app.bluetooth.disconnect();
             }
         });
         Button send = (Button) findViewById(R.id.send);
@@ -73,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.i("Bluetooth", "Send Start!");
                 EditText toSend = (EditText) findViewById(R.id.toSend);
                 String message = toSend.getText().toString();
-                if(bluetooth.send(message)) {
+                if(app.bluetooth.send(message)) {
                     toSend.setText("");
                 } else {
                     Toast.makeText(me, "Send didn't work!", Toast.LENGTH_LONG);
@@ -82,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        bluetooth.subscribe(new BluetoothManager.InputHandler() {
+        app.bluetooth.subscribe(new BluetoothManager.InputHandler() {
             public void handleMessage(String message) {
 
                 TextView received = (TextView) findViewById(R.id.lastReceived);
@@ -95,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
         v.setOnItemClickListener(new ListView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                bluetooth.connect(position);
+                app.bluetooth.connect(position);
             }
         });
     }
@@ -103,10 +105,10 @@ public class MainActivity extends AppCompatActivity {
     protected List<BluetoothDevice> devices;
 
     public void scan() {
-        bluetooth.scan();
+        app.bluetooth.scan();
 
         ListView list = (ListView) findViewById(R.id.listView);
-        ArrayAdapter<BluetoothDevice> adapter = new BluetoothDeviceAdapter(this, R.layout.bluetooth_device_list_row, bluetooth.getDevices());
+        ArrayAdapter<BluetoothDevice> adapter = new BluetoothDeviceAdapter(this, R.layout.bluetooth_device_list_row, app.bluetooth.getDevices());
         list.setAdapter(adapter);
 
     }
