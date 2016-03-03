@@ -7,17 +7,19 @@
     <ListView
         android:layout_width="match_parent"
         android:layout_height="271dp"
-        android:id="@+id/listView2"
+        android:id="@+id/commReceived"
         android:layout_weight="0.98"
-        android:stackFromBottom="false"
-        android:layout_above="@+id/toSend"
-        android:layout_alignParentTop="true" />
+        android:stackFromBottom="true"
+        android:layout_alignParentTop="true"
+        android:layout_above="@+id/commToSend"
+        android:textFilterEnabled="false"
+        android:transcriptMode="alwaysScroll" />
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/toSend"
-        android:layout_above="@+id/send"
+        android:id="@+id/commToSend"
+        android:layout_above="@+id/commSend"
         android:layout_alignParentStart="true" />
 
     <Button
@@ -25,15 +27,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Send"
-        android:id="@+id/send"
-        android:layout_above="@+id/disconnect"
+        android:id="@+id/commSend"
+        android:layout_above="@+id/commDisconnect"
         android:layout_alignParentStart="true" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Disconnect"
-        android:id="@+id/disconnect"
+        android:id="@+id/commDisconnect"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true" />

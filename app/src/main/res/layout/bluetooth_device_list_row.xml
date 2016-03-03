@@ -13,6 +13,9 @@
             android:layout_margin="5dp"
             android:textAlignment="center"
             android:text="Device Name"
-            android:id="@+id/deviceName" />
+            android:id="@+id/deviceName"
+            android:textIsSelectable="false"
+            android:textSize="12pt"
+            android:gravity="center_horizontal" />
     </TableRow>
 </TableLayout>
