@@ -9,6 +9,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Button;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,9 +38,12 @@ public class MainActivity extends AppCompatActivity {
         v.setOnItemClickListener(new ListView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                app.bluetooth.connect(position);
-                Intent intent = new Intent(me, CommunicatorActivity.class);
-                startActivity(intent);
+                if(app.bluetooth.connect(position)) {
+                    Intent intent = new Intent(me, CommunicatorActivity.class);
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(me, "Connection Failed!", Toast.LENGTH_LONG).show();
+                }
             }
         });
     }

@@ -61,8 +61,8 @@ public class CommunicatorActivity extends AppCompatActivity {
             }
         });
 
-        app.bluetooth.subscribe(new BluetoothManager.InputHandler() {
-            public void handleMessage(String message) {
+        app.bluetooth.subscribe(new StringHandler() {
+            public void handle(String message) {
                 messages.add("RECEIVED: " + message);
                 messageAdapter.notifyDataSetChanged();
             }

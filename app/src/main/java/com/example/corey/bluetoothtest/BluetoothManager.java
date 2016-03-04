@@ -1,13 +1,11 @@
 package com.example.corey.bluetoothtest;
 
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,10 +31,11 @@ public class BluetoothManager {
     private Thread inputThread;
     private MessageHandler messageHandler;
 
-
     private final static UUID SPP_UUID = UUID.fromString(
             "00001101-0000-1000-8000-00805F9B34FB"
     );
+    public final static char START_BYTE = (char) 0x2;
+    public final static char END_BYTE = (char) 0x3;
 
     private final static Charset CHARSET = StandardCharsets.UTF_8;
 
@@ -67,11 +66,21 @@ public class BluetoothManager {
             disconnect();
         }
 
+
+
         try {
             socket = device.createInsecureRfcommSocketToServiceRecord(SPP_UUID);
 
-            socket.connect();
-
+            int retries = 0;
+            while(retries++ < 5) {
+                try {
+                    socket.connect();
+                    break;
+                } catch (IOException e) {
+                    Log.i("BluetoothManager", "Connection attempt #" + retries + " failed!");
+                }
+            }
+            Log.i("BluetoothManager", "Connection succeeded!");
             output = socket.getOutputStream();
             input = socket.getInputStream();
 
@@ -81,6 +90,7 @@ public class BluetoothManager {
 
         } catch(IOException e) {
             Log.i("BluetoothManager", "Connection Failed!");
+            Log.e("BluetoothManager", e.getMessage());
             socket = null;
             input = null;
             output = null;
@@ -95,7 +105,7 @@ public class BluetoothManager {
         return true;
     }
 
-    public void subscribe(InputHandler handler) {
+    public void subscribe(StringHandler handler) {
         messageHandler.addHandler(handler);
     }
 
@@ -132,36 +142,32 @@ public class BluetoothManager {
             return false;
         }
         try {
-            output.write(message.toString().getBytes(CHARSET));
+            output.write(START_BYTE);
+            output.write(message.getBytes(CHARSET));
+            output.write(END_BYTE);
         } catch(IOException e) {
             return false;
         }
         return true;
     }
 
-    public interface InputHandler {
-        public void handleMessage(String message);
-    }
-
     private class MessageHandler extends Handler {
         @Override
         public void handleMessage(Message message) {
             String contents = message.getData().getString("data");
-
-            for(InputHandler h : handlers) {
-                h.handleMessage(contents);
-            }
+            Log.i("MessageHandler", "contents: " + contents);
+            builder.pushString(contents);
         }
 
-        public void addHandler(InputHandler handler) {
-            handlers.add(handler);
+        public void addHandler(StringHandler handler) {
+            builder.subscribe(handler);
         }
 
         public void clear() {
-            handlers.clear();
+            builder.clear();
         }
 
-        private List<InputHandler> handlers = new ArrayList<InputHandler>();
+        private PacketBuilder builder = new PacketBuilder();
     }
 
 }
