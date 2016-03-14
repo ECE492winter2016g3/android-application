@@ -33,6 +33,13 @@ public class MainActivity extends AppCompatActivity {
                 scan();
             }
         });
+        Button canvas = (Button) findViewById(R.id.canvas);
+        canvas.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                Intent intent = new Intent(me, CanvasActivity.class);
+                startActivity(intent);
+            }
+        });
 
         ListView v = (ListView) findViewById(R.id.listView);
         v.setOnItemClickListener(new ListView.OnItemClickListener() {

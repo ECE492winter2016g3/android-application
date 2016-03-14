@@ -152,6 +152,10 @@ public class BluetoothManager {
     }
 
     private class MessageHandler extends Handler {
+        public MessageHandler() {
+            builder.subscribe(checker);
+        }
+
         @Override
         public void handleMessage(Message message) {
             String contents = message.getData().getString("data");
@@ -160,14 +164,51 @@ public class BluetoothManager {
         }
 
         public void addHandler(StringHandler handler) {
-            builder.subscribe(handler);
+            checker.subscribe(handler);
         }
 
         public void clear() {
-            builder.clear();
+            checker.clear();
         }
 
         private PacketBuilder builder = new PacketBuilder();
+        private PacketErrorChecker checker = new PacketErrorChecker();
+
+        private class PacketErrorChecker implements StringHandler {
+            public void handle(String data) {
+                int id = (int) data.charAt(0);
+                int length = (int) data.charAt(1);
+                String packetData = data.substring(2);
+                if(length != data.length() - 2) {
+                    Log.i("PacketErrorChecker", "Discarding packet: " + id + ", length incorrect");
+                } else {
+                    if(recentIds.contains(id)) {
+                        Log.i("PacketErrorChecker", "Discarding packet: " + id + ", duplicate");
+                    } else {
+                        recentIds.add(id);
+                        if(recentIds.size() > RECENT_COUNT) {
+                            recentIds.remove(0);
+                        }
+                        for(StringHandler handler : handlers) {
+                            handler.handle(packetData);
+                        }
+                    }
+                }
+            }
+
+            public void subscribe(StringHandler handler) {
+                handlers.add(handler);
+            }
+
+            public void clear() {
+                handlers.clear();
+            }
+
+
+            private ArrayList<StringHandler> handlers = new ArrayList<>();
+            private static final int RECENT_COUNT = 4;
+            private ArrayList<Integer> recentIds = new ArrayList<>();
+        }
     }
 
 }
