@@ -61,12 +61,12 @@ public class CommunicatorActivity extends AppCompatActivity {
             }
         });
 
-        app.bluetooth.subscribe(new StringHandler() {
-            public void handle(String message) {
-                messages.add("RECEIVED: " + message);
-                messageAdapter.notifyDataSetChanged();
-            }
-        });
+//        app.bluetooth.subscribe(new StringHandler() {
+//            public void handle(String message) {
+//                messages.add("RECEIVED: " + message);
+//                messageAdapter.notifyDataSetChanged();
+//            }
+//        });
 
         messageAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, messages);
         received.setAdapter(messageAdapter);

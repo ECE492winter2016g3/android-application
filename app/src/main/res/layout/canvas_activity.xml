@@ -6,7 +6,7 @@
         android:id="@+id/draw"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/back" />
+        android:layout_above="@+id/lidarDistance" />
 
     <Button
         android:layout_width="wrap_content"
@@ -16,5 +16,46 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="LIDAR distance: Xcm"
+        android:id="@+id/lidarDistance"
+        android:layout_above="@+id/forward"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reverse"
+        android:id="@+id/reverse"
+        android:layout_above="@+id/back"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Forward"
+        android:id="@+id/forward"
+        android:layout_above="@+id/reverse"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Left"
+        android:id="@+id/left"
+        android:layout_alignTop="@+id/reverse"
+        android:layout_toStartOf="@+id/reverse" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Right"
+        android:id="@+id/right"
+        android:layout_above="@+id/back"
+        android:layout_toEndOf="@+id/reverse" />
 
 </RelativeLayout>

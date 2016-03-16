@@ -36,8 +36,9 @@ public class MainActivity extends AppCompatActivity {
         Button canvas = (Button) findViewById(R.id.canvas);
         canvas.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                Intent intent = new Intent(me, CanvasActivity.class);
-                startActivity(intent);
+
+//                Intent intent = new Intent(me, CanvasActivity.class);
+//                startActivity(intent);
             }
         });
 
@@ -46,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if(app.bluetooth.connect(position)) {
-                    Intent intent = new Intent(me, CommunicatorActivity.class);
+                    Intent intent = new Intent(me, CanvasActivity.class);
                     startActivity(intent);
                 } else {
                     Toast.makeText(me, "Connection Failed!", Toast.LENGTH_LONG).show();

@@ -10,9 +10,11 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -34,8 +36,9 @@ public class BluetoothManager {
     private final static UUID SPP_UUID = UUID.fromString(
             "00001101-0000-1000-8000-00805F9B34FB"
     );
-    public final static char START_BYTE = (char) 0x2;
-    public final static char END_BYTE = (char) 0x3;
+    public final static byte START_BYTE = 0x2;
+    public final static byte END_BYTE = 0x3;
+    public final static byte ESCAPE_BYTE = 0x4;
 
     private final static Charset CHARSET = StandardCharsets.UTF_8;
 
@@ -105,7 +108,7 @@ public class BluetoothManager {
         return true;
     }
 
-    public void subscribe(StringHandler handler) {
+    public void subscribe(ByteArrayHandler handler) {
         messageHandler.addHandler(handler);
     }
 
@@ -158,12 +161,13 @@ public class BluetoothManager {
 
         @Override
         public void handleMessage(Message message) {
-            String contents = message.getData().getString("data");
-            Log.i("MessageHandler", "contents: " + contents);
-            builder.pushString(contents);
+            byte[] data = message.getData().getByteArray("data");
+//            String contents = message.getData().getString("data");
+//            Log.i("MessageHandler", "contents: " + String(contents));
+            builder.pushByteArray(data);
         }
 
-        public void addHandler(StringHandler handler) {
+        public void addHandler(ByteArrayHandler handler) {
             checker.subscribe(handler);
         }
 
@@ -174,12 +178,12 @@ public class BluetoothManager {
         private PacketBuilder builder = new PacketBuilder();
         private PacketErrorChecker checker = new PacketErrorChecker();
 
-        private class PacketErrorChecker implements StringHandler {
-            public void handle(String data) {
-                int id = (int) data.charAt(0);
-                int length = (int) data.charAt(1);
-                String packetData = data.substring(2);
-                if(length != data.length() - 2) {
+        private class PacketErrorChecker implements ByteArrayHandler {
+            public void handle(byte[] data) {
+                byte id = data[0];
+                byte length = data[1];
+                byte[] packetData = Arrays.copyOfRange(data, 2, data.length);
+                if(length != data.length - 2) {
                     Log.i("PacketErrorChecker", "Discarding packet: " + id + ", length incorrect");
                 } else {
                     if(recentIds.contains(id)) {
@@ -189,14 +193,14 @@ public class BluetoothManager {
                         if(recentIds.size() > RECENT_COUNT) {
                             recentIds.remove(0);
                         }
-                        for(StringHandler handler : handlers) {
+                        for(ByteArrayHandler handler : handlers) {
                             handler.handle(packetData);
                         }
                     }
                 }
             }
 
-            public void subscribe(StringHandler handler) {
+            public void subscribe(ByteArrayHandler handler) {
                 handlers.add(handler);
             }
 
@@ -205,9 +209,9 @@ public class BluetoothManager {
             }
 
 
-            private ArrayList<StringHandler> handlers = new ArrayList<>();
+            private ArrayList<ByteArrayHandler> handlers = new ArrayList<>();
             private static final int RECENT_COUNT = 4;
-            private ArrayList<Integer> recentIds = new ArrayList<>();
+            private ArrayList<Byte> recentIds = new ArrayList<>();
         }
     }
 

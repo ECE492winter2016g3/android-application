@@ -13,6 +13,8 @@ import java.util.Arrays;
  * Created by Corey on 01/03/2016.
  */
 public class BluetoothScanner implements Runnable {
+    public static final int BUF_LEN = 256;
+
     private Handler handler;
     private InputStream input;
 
@@ -23,7 +25,7 @@ public class BluetoothScanner implements Runnable {
 
     @Override
     public void run() {
-        byte[] buf = new byte[256];
+        byte[] buf = new byte[BUF_LEN];
 
         int count = 0;
 
@@ -34,6 +36,7 @@ public class BluetoothScanner implements Runnable {
                 if(count == 0) {
                     continue;
                 }
+                byte[] data = Arrays.copyOf(buf, count);
                 String recvd = new String(Arrays.copyOfRange(buf, 0, count));
 
                 Log.i("BluetoothScanner", "Received packet: " + recvd);
@@ -41,7 +44,8 @@ public class BluetoothScanner implements Runnable {
                 Message m = new Message();
                 Bundle b = new Bundle();
 
-                b.putString("data", recvd);
+                b.putByteArray("data", data);
+//                b.putString("data", recvd);
                 m.setData(b);
                 handler.sendMessage(m);
             } catch (java.io.IOException e) {
