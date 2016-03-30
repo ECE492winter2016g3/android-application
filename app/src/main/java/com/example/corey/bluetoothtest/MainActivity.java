@@ -37,8 +37,8 @@ public class MainActivity extends AppCompatActivity {
         canvas.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
 
-//                Intent intent = new Intent(me, CanvasActivity.class);
-//                startActivity(intent);
+                Intent intent = new Intent(me, CanvasActivity.class);
+                startActivity(intent);
             }
         });
 

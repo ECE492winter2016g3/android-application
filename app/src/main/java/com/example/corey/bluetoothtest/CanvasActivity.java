@@ -43,6 +43,8 @@ public class CanvasActivity extends AppCompatActivity {
         final AppCompatActivity me = this;
         app = (BluetoothApplication) getApplicationContext();
 
+        final DrawView drawView = (DrawView) findViewById(R.id.draw);
+
 
 
         Button back = (Button) findViewById(R.id.back);
@@ -61,6 +63,7 @@ public class CanvasActivity extends AppCompatActivity {
         Button left = (Button) findViewById(R.id.left);
 
         final TextView lidarDistance = (TextView) findViewById(R.id.lidarDistance);
+        final TextView rotation = (TextView) findViewById(R.id.rotation);
 
         final ButtonHolder holder = new ButtonHolder();
 
@@ -71,14 +74,22 @@ public class CanvasActivity extends AppCompatActivity {
                 switch(holder.get()) {
                     case FORWARD:
                         app.bluetooth.send("f");
+                        app.bluetooth.send("f");
+                        app.bluetooth.send("f");
                         break;
                     case REVERSE:
+                        app.bluetooth.send("b");
+                        app.bluetooth.send("b");
                         app.bluetooth.send("b");
                         break;
                     case LEFT:
                         app.bluetooth.send("l");
+                        app.bluetooth.send("l");
+                        app.bluetooth.send("l");
                         break;
                     case RIGHT:
+                        app.bluetooth.send("r");
+                        app.bluetooth.send("r");
                         app.bluetooth.send("r");
                         break;
                 }
@@ -94,9 +105,13 @@ public class CanvasActivity extends AppCompatActivity {
                     case MotionEvent.ACTION_DOWN:
                         holder.set(HeldButton.FORWARD);
                         app.bluetooth.send("f");
+                        app.bluetooth.send("f");
+                        app.bluetooth.send("f");
                         return true;
                     case MotionEvent.ACTION_UP:
                         holder.set(HeldButton.NONE);
+                        app.bluetooth.send("s");
+                        app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         return true;
                 }
@@ -110,9 +125,13 @@ public class CanvasActivity extends AppCompatActivity {
                     case MotionEvent.ACTION_DOWN:
                         holder.set(HeldButton.REVERSE);
                         app.bluetooth.send("b");
+                        app.bluetooth.send("b");
+                        app.bluetooth.send("b");
                         return true;
                     case MotionEvent.ACTION_UP:
                         holder.set(HeldButton.NONE);
+                        app.bluetooth.send("s");
+                        app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         return true;
                 }
@@ -126,9 +145,13 @@ public class CanvasActivity extends AppCompatActivity {
                     case MotionEvent.ACTION_DOWN:
                         holder.set(HeldButton.LEFT);
                         app.bluetooth.send("l");
+                        app.bluetooth.send("l");
+                        app.bluetooth.send("l");
                         return true;
                     case MotionEvent.ACTION_UP:
                         holder.set(HeldButton.NONE);
+                        app.bluetooth.send("s");
+                        app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         return true;
                 }
@@ -142,9 +165,13 @@ public class CanvasActivity extends AppCompatActivity {
                     case MotionEvent.ACTION_DOWN:
                         holder.set(HeldButton.RIGHT);
                         app.bluetooth.send("r");
+                        app.bluetooth.send("r");
+                        app.bluetooth.send("r");
                         return true;
                     case MotionEvent.ACTION_UP:
                         holder.set(HeldButton.NONE);
+                        app.bluetooth.send("s");
+                        app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         return true;
                 }
@@ -235,20 +262,54 @@ public class CanvasActivity extends AppCompatActivity {
 
         app.bluetooth.subscribe(new ByteArrayHandler() {
             public void handle(byte[] message) {
-                if(message.length < 2) {
+                if(message.length < 4) {
                     Log.e("CanvasActivity", "Message too short!");
                     return;
                 }
                 byte lsb = message[0];
                 byte msb = message[1];
 
-                int distance = ((int) lsb) + (((int) msb) << 8);
+                Log.i("CanvasActivity", "bin lsb: " + String.format("%02X", lsb));
+                Log.i("CanvasActivity", "bin msb: " + String.format("%02X", msb));
 
-                String output = "LIDAR distance: " + distance;
+                int distance = 0;
+                distance += (lsb & 0xFF);
+                distance += ((msb << 8) & 0xFF00);
+
+                lsb = message[2];
+                msb = message[3];
+
+                int angle = 0;
+                angle += (lsb & 0xFF);
+                angle += ((msb << 8) & 0xFF00);
+
+                double realAngle = ((double) angle) / 10;
+
+                int x = (int) (Math.cos(realAngle) * ((double) distance));
+                int y = (int) (Math.sin(realAngle) * ((double) distance));
+
+                drawView.clear();
+                drawView.addPoint(new DrawView.Point(-200, -200));
+                drawView.addPoint(new DrawView.Point(200, -200));
+                drawView.addPoint(new DrawView.Point(-200, 200));
+                drawView.addPoint(new DrawView.Point(200, 200));
+                drawView.addLine(new DrawView.Line(0, 0, x, y));
+
+                drawView.invalidate();
+
+                Log.i("CanvasActivity", "bin dist: " + String.format("%04X", distance));
+                Log.i("CanvasActivity", "Rotation int: " + angle);
+
+                String output = "LIDAR distance: " + distance + "cm";
 
                 Log.i("CanvasActivity", output);
 
                 lidarDistance.setText(output);
+
+                output = "Rotation: " + realAngle + " deg";
+
+                Log.i("CanvasActivity", output);
+                rotation.setText(output);
             }
         });
     }

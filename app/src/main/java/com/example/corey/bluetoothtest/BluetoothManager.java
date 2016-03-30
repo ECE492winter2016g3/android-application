@@ -115,28 +115,33 @@ public class BluetoothManager {
     public void disconnect() {
         Log.i("Bluetooth", "Disconnect Start!");
         try {
-            input.close();
-            input = null;
-        } catch (java.io.IOException e) {
+            try {
+                input.close();
+                input = null;
+            } catch (java.io.IOException e) {
+
+            }
+            try {
+                output.close();
+                output = null;
+            } catch (java.io.IOException e) {
+
+            }
+            try {
+                socket.close();
+                socket = null;
+            } catch (java.io.IOException e) {
+
+            }
+
+            if(inputThread != null) {
+                inputThread.interrupt();
+                inputThread = null;
+            }
+        } catch (NullPointerException e) {
 
         }
-        try {
-            output.close();
-            output = null;
-        } catch (java.io.IOException e) {
 
-        }
-        try {
-            socket.close();
-            socket = null;
-        } catch (java.io.IOException e) {
-
-        }
-
-        if(inputThread != null) {
-            inputThread.interrupt();
-            inputThread = null;
-        }
         Log.i("Bluetooth", "Disconnect End!");
     }
 
