@@ -733,6 +733,9 @@ public class mapping {
     public ArrayList<MapSegment> getSegments() {
         return allSegments;
     }
+    public Vec getPosition() {
+        return robotPosition;
+    }
 
 	public void init() {
 		robotAngle = 0;

@@ -360,12 +360,21 @@ public class CanvasActivity extends AppCompatActivity {
                         mapping.MapSegment segment = segments.get(i);
                         drawView.addLine(new DrawView.Line(
                                 segment.origin.x,
-                                segment.origin.y,
+                                -segment.origin.y,
                                 segment.vec.x,
-                                segment.vec.y
+                                -segment.vec.y
                         ));
-                        drawView.invalidate();
                     }
+                    mapping.Vec pos = map.getPosition();
+                    drawView.setPoint(new DrawView.Point(pos.x, -pos.y));
+                    for(int i = 0; i < angles.length; ++i) {
+                        drawView.addPoint(new DrawView.Point(
+                                (float) Math.cos(angles[i]) * dists[i],
+                                (float) -Math.sin(angles[i]) * dists[i]
+                        ));
+                    }
+
+                    drawView.invalidate();
                 } else if(code == 'T') {
 
                 } /*else if(code == 'I') {

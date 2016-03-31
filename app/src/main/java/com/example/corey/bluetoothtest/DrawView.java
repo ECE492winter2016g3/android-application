@@ -16,7 +16,9 @@ import java.util.List;
  * Created by Corey on 04/03/2016.
  */
 public class DrawView extends View {
+    Point mainPoint;
     public void init() {
+        mainPoint = new Point(0,0);
         points = new ArrayList<>();
         lines = new ArrayList<>();
         xScale = new LinearScale();
@@ -93,6 +95,21 @@ public class DrawView extends View {
     public DrawView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
+    }
+    public void setPoint(Point point) {
+        mainPoint = point;
+        if(point.x < xScale.domainMin) {
+            xScale.domainMin = point.x;
+        }
+        if(point.x > xScale.domainMax) {
+            xScale.domainMax = point.x;
+        }
+        if(point.y < yScale.domainMin) {
+            yScale.domainMin = point.y;
+        }
+        if(point.y > yScale.domainMax) {
+            yScale.domainMax = point.y;
+        }
     }
 
     public void addPoint(Point point) {
@@ -182,14 +199,16 @@ public class DrawView extends View {
 
         paint.setColor(Color.BLACK);
         paint.setStrokeWidth(3);
+        paint.setColor(Color.BLUE);
         for(Point p : points) {
             Log.i("DrawView", "Drawing point at " + xScale.scale(p.x) + ", " + yScale.scale(p.y));
             canvas.drawCircle(
                     xScale.scale(p.x),
                     yScale.scale(p.y),
-                    6,
+                    3,
                     paint);
         }
+        paint.setColor(Color.BLACK);
         for(Line l : lines) {
             canvas.drawLine(
                     xScale.scale(l.x1),
@@ -198,6 +217,12 @@ public class DrawView extends View {
                     yScale.scale(l.y2),
                     paint);
         }
+        paint.setColor(Color.RED);
+        canvas.drawCircle(
+                xScale.scale(mainPoint.x),
+                yScale.scale(mainPoint.y),
+                8,
+                paint);
     }
 
 }
