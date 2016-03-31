@@ -1,3 +1,5 @@
+package com.example.corey.bluetoothtest;
+
 
 import java.util.ArrayList;
 import java.lang.Math;
@@ -727,6 +729,10 @@ public class mapping {
 	public mapping() {
 
 	}
+
+    public ArrayList<MapSegment> getSegments() {
+        return allSegments;
+    }
 
 	public void init() {
 		robotAngle = 0;

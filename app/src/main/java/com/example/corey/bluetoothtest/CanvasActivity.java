@@ -9,6 +9,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -17,6 +19,12 @@ import java.util.TimerTask;
  */
 public class CanvasActivity extends AppCompatActivity {
     private BluetoothApplication app;
+    private final mapping map = new mapping();
+
+    private final ArrayList<Float> sweepInProgressDists = new ArrayList<>();
+    private final ArrayList<Float> sweepInProgressAngles = new ArrayList<>();
+
+    private final Holder<ScanType> moveType = new Holder<>(ScanType.INITIAL);
 
     public enum HeldButton {
         NONE,
@@ -25,6 +33,25 @@ public class CanvasActivity extends AppCompatActivity {
         LEFT,
         RIGHT
     };
+
+    public enum ScanType {
+        INITIAL,
+        LINEAR,
+        ROTATION
+    };
+
+    public class Holder<T> {
+        public Holder(T value) {
+            myValue = value;
+        }
+        public void set(T value) {
+            myValue = value;
+        }
+        public T get() {
+            return myValue;
+        }
+        private T myValue;
+    }
 
     public class ButtonHolder {
         public void set(HeldButton btn) {
@@ -37,12 +64,27 @@ public class CanvasActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        Log.i("CanvasActivity", "Sending Init packets!");
+        moveType.set(ScanType.INITIAL);
+        app.bluetooth.send("i");
+        app.bluetooth.send("i");
+        app.bluetooth.send("i");
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.canvas_activity);
         final AppCompatActivity me = this;
         app = (BluetoothApplication) getApplicationContext();
 
+        map.init();
+        Log.i("CanvasActivity", "Sending Init packets!");
+        app.bluetooth.send("i");
+        app.bluetooth.send("i");
+        app.bluetooth.send("i");
         final DrawView drawView = (DrawView) findViewById(R.id.draw);
 
 
@@ -65,7 +107,7 @@ public class CanvasActivity extends AppCompatActivity {
         final TextView lidarDistance = (TextView) findViewById(R.id.lidarDistance);
         final TextView rotation = (TextView) findViewById(R.id.rotation);
 
-        final ButtonHolder holder = new ButtonHolder();
+        final Holder<HeldButton> holder = new Holder<>(HeldButton.NONE);
 
         final Timer timer = new Timer();
         final TimerTask periodicSend = new TimerTask() {
@@ -103,6 +145,7 @@ public class CanvasActivity extends AppCompatActivity {
             public boolean onTouch(View v, MotionEvent event) {
                 switch(event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
+                        moveType.set(ScanType.LINEAR);
                         holder.set(HeldButton.FORWARD);
                         app.bluetooth.send("f");
                         app.bluetooth.send("f");
@@ -123,6 +166,7 @@ public class CanvasActivity extends AppCompatActivity {
             public boolean onTouch(View v, MotionEvent event) {
                 switch(event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
+                        moveType.set(ScanType.LINEAR);
                         holder.set(HeldButton.REVERSE);
                         app.bluetooth.send("b");
                         app.bluetooth.send("b");
@@ -143,6 +187,7 @@ public class CanvasActivity extends AppCompatActivity {
             public boolean onTouch(View v, MotionEvent event) {
                 switch(event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
+                        moveType.set(ScanType.ROTATION);
                         holder.set(HeldButton.LEFT);
                         app.bluetooth.send("l");
                         app.bluetooth.send("l");
@@ -163,6 +208,7 @@ public class CanvasActivity extends AppCompatActivity {
             public boolean onTouch(View v, MotionEvent event) {
                 switch(event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
+                        moveType.set(ScanType.ROTATION);
                         holder.set(HeldButton.RIGHT);
                         app.bluetooth.send("r");
                         app.bluetooth.send("r");
@@ -258,16 +304,96 @@ public class CanvasActivity extends AppCompatActivity {
 //                    Toast.makeText(me, "Send didn't work!", Toast.LENGTH_SHORT).show();
 //                }
 //            }
-//        });
+////        });
+//        'S' - start
+//                'V' - value
+//                        'F' - finish
 
         app.bluetooth.subscribe(new ByteArrayHandler() {
             public void handle(byte[] message) {
-                if(message.length < 4) {
+                byte code = message[0];
+                if(code == 'S') {
+                    sweepInProgressDists.clear();
+                    sweepInProgressAngles.clear();
+                } else if(code == 'V') {
+                    Log.i("CanvasActivity", "Value Message!");
+                    if(message.length < 5) {
+                        Log.e("CanvasActivity", "Value message too short!");
+                        return;
+                    }
+                    int distance = 0;
+                    byte lsb = message[1];
+                    byte msb = message[2];
+                    distance += (lsb & 0xFF);
+                    distance += ((msb << 8) & 0xFF00);
+                    sweepInProgressDists.add((float) distance);
+
+                    int steps = 0;
+                    lsb = message[3];
+                    msb = message[4];
+                    steps += (lsb & 0xFF);
+                    steps += ((msb << 8) & 0xFF00);
+                    float angle = (((float) steps) - 36.0f) * 1.8f * 2.0f * (float) Math.PI / 360.0f;
+                    sweepInProgressAngles.add(angle);
+                } else if(code == 'F') {
+                    float[] angles = new float[sweepInProgressAngles.size()];
+                    float[] dists = new float[sweepInProgressDists.size()];
+                    if(angles.length != dists.length) {
+                        Log.e("CanvasActivity", "# of angles != # of dists!");
+                    }
+                    for(int i = 0; i < angles.length; ++i) {
+                        angles[i] = sweepInProgressAngles.get(i);
+                        dists[i] = sweepInProgressDists.get(i);
+                    }
+                    if(moveType.get() == ScanType.LINEAR) {
+                        Log.i("CanvasActivity", "ScanType LINEAR");
+                        map.updateLin(angles, dists);
+                    } else if(moveType.get() == ScanType.ROTATION) {
+                        Log.i("CanvasActivity", "ScanType ROTATION");
+                        map.updateRot(angles, dists, 0 /* TODO: Turn hint*/);
+                    } else if(moveType.get() == ScanType.INITIAL) {
+                        Log.i("CanvasActivity", "ScanType INITIAL");
+                        map.initialScan(angles, dists);
+                    }
+                    List<mapping.MapSegment> segments = map.getSegments();
+                    for(int i = 0; i < segments.size(); ++i) {
+                        mapping.MapSegment segment = segments.get(i);
+                        drawView.addLine(new DrawView.Line(
+                                segment.origin.x,
+                                segment.origin.y,
+                                segment.vec.x,
+                                segment.vec.y
+                        ));
+                        drawView.invalidate();
+                    }
+                } else if(code == 'T') {
+
+                } /*else if(code == 'I') {
+                    float[] angles = new float[sweepInProgressAngles.size()];
+                    float[] dists = new float[sweepInProgressDists.size()];
+                    if(angles.length != dists.length) {
+                        Log.e("CanvasActivity", "# of angles != # of dists!");
+                    }
+                    for(int i = 0; i < angles.length; ++i) {
+                        angles[i] = sweepInProgressAngles.get(i);
+                        dists[i] = sweepInProgressDists.get(i);
+                    }
+                    map.initialScan(angles, dists);
+                }*/
+                if(false /* Start of sweep */) {
+
+                } else if(false /* End of sweep */) {
+
+                }
+                if(true)
+                    return;
+
+                if(message.length < 5) {
                     Log.e("CanvasActivity", "Message too short!");
                     return;
                 }
-                byte lsb = message[0];
-                byte msb = message[1];
+                byte lsb = message[1];
+                byte msb = message[2];
 
                 Log.i("CanvasActivity", "bin lsb: " + String.format("%02X", lsb));
                 Log.i("CanvasActivity", "bin msb: " + String.format("%02X", msb));
@@ -276,17 +402,20 @@ public class CanvasActivity extends AppCompatActivity {
                 distance += (lsb & 0xFF);
                 distance += ((msb << 8) & 0xFF00);
 
-                lsb = message[2];
-                msb = message[3];
+                lsb = message[3];
+                msb = message[4];
 
                 int angle = 0;
                 angle += (lsb & 0xFF);
                 angle += ((msb << 8) & 0xFF00);
 
-                double realAngle = ((double) angle) / 10;
+                float realAngle = ((float) angle) / 10;
 
-                int x = (int) (Math.cos(realAngle) * ((double) distance));
-                int y = (int) (Math.sin(realAngle) * ((double) distance));
+                int x = (int) (Math.cos(realAngle) * ((float) distance));
+                int y = (int) (Math.sin(realAngle) * ((float) distance));
+
+                sweepInProgressDists.add((float) distance);
+                sweepInProgressAngles.add(realAngle);
 
                 drawView.clear();
                 drawView.addPoint(new DrawView.Point(-200, -200));
