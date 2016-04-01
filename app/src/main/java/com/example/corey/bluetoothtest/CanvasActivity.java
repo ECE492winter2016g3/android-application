@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -44,6 +45,9 @@ public class CanvasActivity extends AppCompatActivity {
     private final Holder<ScanType> moveType = new Holder<>(ScanType.INITIAL);
 //    private final Holder<Integer> rotation = new Holder<>(0);
     float rotation = 0;
+
+    private int logCount = 0;
+    private File logDir = null;
 
     public enum HeldButton {
         NONE,
@@ -89,8 +93,8 @@ public class CanvasActivity extends AppCompatActivity {
             Log.i("CanvasActivity", "Sending Init packets!");
             moveType.set(ScanType.INITIAL);
             app.bluetooth.send("i");
-            app.bluetooth.send("i");
-            app.bluetooth.send("i");
+//            app.bluetooth.send("i");
+//            app.bluetooth.send("i");
         }
     }
 
@@ -98,7 +102,7 @@ public class CanvasActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.canvas_activity);
-        final AppCompatActivity me = this;
+        final CanvasActivity me = this;
         app = (BluetoothApplication) getApplicationContext();
 
         map.init();
@@ -394,14 +398,18 @@ public class CanvasActivity extends AppCompatActivity {
 
                         Log.i("CanvasActivity", "Storage state: " + Environment.getExternalStorageState());
                         File externalStorage = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
-                        File logDir = new File(externalStorage.getAbsolutePath() + "/log");
+                        String currentTime = java.text.DateFormat.getTimeInstance().format(Calendar.getInstance().getTime());
+                        if(logDir == null) {
+                            logDir = new File(externalStorage.getAbsolutePath() + "/log/session-" + currentTime);
+                        }
                         Log.i("CanvasActivity", "External Storage: " + externalStorage.getAbsolutePath() + " exists: " + externalStorage.exists());
                         if(!logDir.exists()) {
                             if(!logDir.mkdirs()) {
                                 Log.i("CanvasActivity", "mkdirs fails even though file doesn't exist!");
                             }
                         }
-                        File logFile = new File(logDir, "log-" + System.currentTimeMillis() + ".csv");
+                        currentTime = currentTime.replace(" ", "");
+                        File logFile = new File(logDir, "log-" + moveType.get().toString() + "-" + logCount++ + ".csv");
                         Log.i("CanvasActivity", "Log dir: " + logDir.getAbsolutePath() + " exists: " + logDir.exists());
                         if(!logFile.exists()) {
                             try {

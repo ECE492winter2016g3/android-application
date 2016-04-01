@@ -14,7 +14,7 @@ public class mapping {
 	public static float BROAD_SIZE = 100.0f;
 
 	/* Variance in the lidar range from the true value is +- 1cm */
-	public static float LIDAR_VARIANCE = 3.0f;
+	public static float LIDAR_VARIANCE = 4.0f;
 
 	/* Max number of samples in a sweep by the sensor */
 	public static int SWEEP_COUNT = 180;
@@ -239,7 +239,7 @@ public class mapping {
 			// 	|| thisDifference < 0.625*lastDifference) {
 			// 	// Not following a smooth wall
 			// 	failed = true;
-			} else if (thisDifference > 2*LIDAR_VARIANCE) {
+			} else if (thisDifference > 2.0f*LIDAR_VARIANCE) {
 				// Points too spread out
 				failed = true;
 			} else {
@@ -522,7 +522,7 @@ public class mapping {
 					float dirlen = perplen / frac;
 
 					// Weight based on length and frac
-					float weight = frac * (to_match.vec.length() / longestSegLength);
+					float weight = frac;//* (to_match.vec.length() / longestSegLength);
 
 					// Note: When frac is small, dirlen will be large, and errors will be
 					// scaled up, so use frac as the weight of a measurement
