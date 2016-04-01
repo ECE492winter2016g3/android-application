@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.lang.Math;
 
 public class mapping {
+	public int currentSweep = 0;
 	public static float PI = 3.1415926535f;
 
 	/* Broad phase is a 10x10 grid of 100x100 cm squares */
@@ -13,7 +14,7 @@ public class mapping {
 	public static float BROAD_SIZE = 100.0f;
 
 	/* Variance in the lidar range from the true value is +- 1cm */
-	public static float LIDAR_VARIANCE = 4.0f;
+	public static float LIDAR_VARIANCE = 3.0f;
 
 	/* Max number of samples in a sweep by the sensor */
 	public static int SWEEP_COUNT = 180;
@@ -74,14 +75,16 @@ public class mapping {
 	}
 
 	public static class MapSegment {
-		public MapSegment() {
+		public MapSegment(int sweep) {
 			pointList = new ArrayList<MapPoint>();
 			origin = new Vec();
 			vec = new Vec();
+			created = sweep;
 		}
 		public ArrayList<MapPoint> pointList;
 		public Vec origin;
 		public Vec vec;
+		public int created;
 	}
 	/* Dot product */
 	float dot(Vec a, Vec b) {
@@ -232,10 +235,10 @@ public class mapping {
 			if (i == angles.length) {
 				// Final iteration, always fail
 				failed = true;
-				// } else if (thisDifference > 1.6*lastDifference
-				// 	|| thisDifference < 0.625*lastDifference) {
-				// 	// Not following a smooth wall
-				// 	failed = true;
+			// } else if (thisDifference > 1.6*lastDifference
+			// 	|| thisDifference < 0.625*lastDifference) {
+			// 	// Not following a smooth wall
+			// 	failed = true;
 			} else if (thisDifference > 2*LIDAR_VARIANCE) {
 				// Points too spread out
 				failed = true;
@@ -273,7 +276,7 @@ public class mapping {
 				if ((i - start_index) > 2) {
 					// Emit the points start_index up to i - 1
 					// (i is the index that we failed to extend to)
-					MapSegment seg = new MapSegment();
+					MapSegment seg = new MapSegment(currentSweep);
 					for (int j = start_index; j < i; ++j) {
 						MapPoint point = new MapPoint();
 						point.position = pts.get(j).copy();
@@ -601,7 +604,7 @@ public class mapping {
 	// Merge in a line segment adding it to the state
 	void mergeSegment(MapSegment seg) {
 		// Try to find a colinear line segment to merge with
-		boolean merged = false;
+		 boolean merged = false;
 		for (MapSegment cand: allSegments) {
 			// First, point the two segments in the same direction
 			if (dot(cand.vec, seg.vec) < 0.0f) {
@@ -644,7 +647,7 @@ public class mapping {
 			float overlapSlop = 2*LIDAR_VARIANCE;
 			boolean projectionDoesOverlap =
 					(p2 > -overlapSlop && p2 < tlen+overlapSlop) ||
-							(p1 > -overlapSlop && p1 < tlen+overlapSlop);
+					(p1 > -overlapSlop && p1 < tlen+overlapSlop);
 			//
 			if ((projectionDoesOverlap && (isTouching || relativelyClose)) || doesIntersect) {
 				// We have an intersection. Add the points from seg to
@@ -735,7 +738,6 @@ public class mapping {
 					float dtheta = theta2 - theta1;
 					if (dtheta < 0) dtheta += PI;
 
-
 					//Log.i("Mapping", " " + pdist2 + " (theta=" + theta2 + ") del = " + dtheta);
 
 					// Now, we have to calculate how reliable the measurement is, off
@@ -817,7 +819,16 @@ public class mapping {
 				float best_diff = histogram.get(best_index).total / histogram.get(best_index).count;
 				//best_diff = -best_diff;
 				// Adjust to hint
+				Log.i("Mapping", "rotation pre modification: " + robotAngle);
+
+				while(turnHint > PI) {
+					turnHint -= 2 * PI;
+				}
+				while(turnHint < -PI) {
+					turnHint += 2 * PI;
+				}
 				if (turnHint < 0) {
+					Log.i("Mapping", "Adjusting best_diff from " + best_diff + " to " + (best_diff - PI));
 					best_diff -= PI;
 				}
 				robotAngle += best_diff;
@@ -852,6 +863,10 @@ public class mapping {
 
 	}
 
+	public int getCurrentSweep() {
+		return currentSweep;
+	}
+
 	public void init() {
 		robotAngle = 0;
 		robotPosition = new Vec();
@@ -866,6 +881,7 @@ public class mapping {
 	}
 
 	public void updateLin(float angles[], float distances[]) {
+		++currentSweep;
 		// First step is feature extraction, we need to break down the
 		// sensor input into points and segments (sequences of 3+ colinear points)
 		ArrayList<MapPoint> points = new ArrayList<MapPoint>();
@@ -899,6 +915,7 @@ public class mapping {
 	}
 
 	public void updateRot(float angles[], float distances[], float turnHint) {
+		++currentSweep;
 		// First step is feature extraction, we need to break down the
 		// sensor input into points and segments (sequences of 3+ colinear points)
 		ArrayList<MapPoint> points = new ArrayList<MapPoint>();

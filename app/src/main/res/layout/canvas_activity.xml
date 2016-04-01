@@ -6,7 +6,7 @@
         android:id="@+id/draw"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/lidarDistance" />
+        android:layout_above="@+id/dimensions" />
 
     <Button
         android:layout_width="wrap_content"
@@ -21,8 +21,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="LIDAR distance: Xcm"
-        android:id="@+id/lidarDistance"
+        android:text="Map Dimensions: "
+        android:id="@+id/dimensions"
         android:layout_above="@+id/forward"
         android:layout_alignParentStart="true" />
 
@@ -57,14 +57,5 @@
         android:id="@+id/right"
         android:layout_above="@+id/back"
         android:layout_toEndOf="@+id/reverse" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Rotation: X degrees"
-        android:id="@+id/rotation"
-        android:layout_alignBottom="@+id/lidarDistance"
-        android:layout_alignParentEnd="true" />
 
 </RelativeLayout>

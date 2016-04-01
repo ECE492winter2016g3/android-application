@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if(app.bluetooth.connect(position)) {
+                    app.mapInitialized = false;
                     Intent intent = new Intent(me, CanvasActivity.class);
                     startActivity(intent);
                 } else {

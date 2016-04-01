@@ -8,4 +8,5 @@ import android.app.Application;
 public class BluetoothApplication extends Application {
     // Probably bad, but oh well
     public BluetoothManager bluetooth = new BluetoothManager();
+    public boolean mapInitialized = false;
 }
