@@ -17,10 +17,18 @@ import java.util.List;
  */
 public class DrawView extends View {
     Point mainPoint;
+    float robotAngle = 0.0f;
+    public void setRobotAngle(float angle) {
+        robotAngle = angle;
+    }
+    public float getMapSize() {
+        return xScale.domainMax - xScale.domainMin;
+    }
     public void init() {
         mainPoint = new Point(0,0);
         points = new ArrayList<>();
-        lines = new ArrayList<>();
+        oldLines = new ArrayList<>();
+        newLines = new ArrayList<>();
         xScale = new LinearScale();
         yScale = xScale;
 //
@@ -84,7 +92,8 @@ public class DrawView extends View {
     }
 
     private List<Point> points;
-    private List<Line> lines;
+    private List<Line> oldLines;
+    private List<Line> newLines;
     private LinearScale xScale;
     private LinearScale yScale;
 
@@ -127,8 +136,12 @@ public class DrawView extends View {
             yScale.domainMax = point.y;
         }
     }
-    public void addLine(Line line) {
-        lines.add(line);
+    public void addLine(Line line, boolean isNew) {
+        if(isNew) {
+            newLines.add(line);
+        } else {
+            oldLines.add(line);
+        }
 
         if(line.x1 < xScale.domainMin) {
             xScale.domainMin = line.x1;
@@ -157,8 +170,10 @@ public class DrawView extends View {
     }
 
     public void clear() {
+        mainPoint = new Point(0, 0);
         points.clear();
-        lines.clear();
+        oldLines.clear();
+        newLines.clear();
         xScale.reset();
         yScale.reset();
     }
@@ -205,11 +220,12 @@ public class DrawView extends View {
             canvas.drawCircle(
                     xScale.scale(p.x),
                     yScale.scale(p.y),
-                    3,
+                    2,
                     paint);
         }
-        paint.setColor(Color.BLACK);
-        for(Line l : lines) {
+
+        paint.setColor(Color.DKGRAY);
+        for(Line l : oldLines) {
             canvas.drawLine(
                     xScale.scale(l.x1),
                     yScale.scale(l.y1),
@@ -218,10 +234,47 @@ public class DrawView extends View {
                     paint);
         }
         paint.setColor(Color.RED);
+        paint.setStrokeWidth(4);
+        for(Line l : newLines) {
+            canvas.drawLine(
+                    xScale.scale(l.x1),
+                    yScale.scale(l.y1),
+                    xScale.scale(l.x2),
+                    yScale.scale(l.y2),
+                    paint);
+        }
+        paint.setColor(Color.BLACK);
         canvas.drawCircle(
                 xScale.scale(mainPoint.x),
                 yScale.scale(mainPoint.y),
                 8,
+                paint);
+        paint.setColor(Color.BLACK);
+        paint.setStrokeWidth(3);
+        canvas.drawLine(
+                xScale.scale(mainPoint.x),
+                xScale.scale(mainPoint.y),
+                xScale.scale(mainPoint.x) + 50 * (float) Math.cos(robotAngle),
+                xScale.scale(mainPoint.y) - 50 * (float) Math.sin(robotAngle),
+                paint);
+        paint.setColor(Color.BLACK);
+        canvas.drawLine(
+                0,
+                h,
+                xScale.scale(100) - xScale.scale(0),
+                h,
+                paint);
+        canvas.drawLine(
+                0,
+                h,
+                0,
+                h - 5,
+                paint);
+        canvas.drawLine(
+                xScale.scale(100) - xScale.scale(0),
+                h,
+                xScale.scale(100) - xScale.scale(0),
+                h - 5,
                 paint);
     }
 

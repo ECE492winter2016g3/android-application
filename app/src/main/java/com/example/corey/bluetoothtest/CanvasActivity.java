@@ -1,7 +1,11 @@
 package com.example.corey.bluetoothtest;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -9,6 +13,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
@@ -18,6 +25,16 @@ import java.util.TimerTask;
  * Created by Corey on 04/03/2016.
  */
 public class CanvasActivity extends AppCompatActivity {
+    // Storage Permissions
+    private static final int READ_EXTERNAL_STORAGE = 0;
+    private static final int WRITE_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
+
+    private static float RADS_PER_SEC = 3.840f;
+
     private BluetoothApplication app;
     private final mapping map = new mapping();
 
@@ -25,6 +42,8 @@ public class CanvasActivity extends AppCompatActivity {
     private final ArrayList<Float> sweepInProgressAngles = new ArrayList<>();
 
     private final Holder<ScanType> moveType = new Holder<>(ScanType.INITIAL);
+//    private final Holder<Integer> rotation = new Holder<>(0);
+    float rotation = 0;
 
     public enum HeldButton {
         NONE,
@@ -66,11 +85,13 @@ public class CanvasActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        Log.i("CanvasActivity", "Sending Init packets!");
-        moveType.set(ScanType.INITIAL);
-        app.bluetooth.send("i");
-        app.bluetooth.send("i");
-        app.bluetooth.send("i");
+        if(!app.mapInitialized) {
+            Log.i("CanvasActivity", "Sending Init packets!");
+            moveType.set(ScanType.INITIAL);
+            app.bluetooth.send("i");
+            app.bluetooth.send("i");
+            app.bluetooth.send("i");
+        }
     }
 
     @Override
@@ -81,10 +102,6 @@ public class CanvasActivity extends AppCompatActivity {
         app = (BluetoothApplication) getApplicationContext();
 
         map.init();
-        Log.i("CanvasActivity", "Sending Init packets!");
-        app.bluetooth.send("i");
-        app.bluetooth.send("i");
-        app.bluetooth.send("i");
         final DrawView drawView = (DrawView) findViewById(R.id.draw);
 
 
@@ -104,8 +121,8 @@ public class CanvasActivity extends AppCompatActivity {
         Button right = (Button) findViewById(R.id.right);
         Button left = (Button) findViewById(R.id.left);
 
-        final TextView lidarDistance = (TextView) findViewById(R.id.lidarDistance);
-        final TextView rotation = (TextView) findViewById(R.id.rotation);
+        final TextView dimensions = (TextView) findViewById(R.id.dimensions);
+//        final TextView rotation = (TextView) findViewById(R.id.rotation);
 
         final Holder<HeldButton> holder = new Holder<>(HeldButton.NONE);
 
@@ -182,11 +199,14 @@ public class CanvasActivity extends AppCompatActivity {
                 return false;
             }
         });
+
         left.setOnTouchListener(new View.OnTouchListener() {
+            private long timeStamp;
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch(event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
+                        timeStamp = System.currentTimeMillis();
                         moveType.set(ScanType.ROTATION);
                         holder.set(HeldButton.LEFT);
                         app.bluetooth.send("l");
@@ -194,7 +214,12 @@ public class CanvasActivity extends AppCompatActivity {
                         app.bluetooth.send("l");
                         return true;
                     case MotionEvent.ACTION_UP:
+                        long currentTime = System.currentTimeMillis();
+
+                        Log.i("Rotation", "LEFT Rotated for " + (currentTime - timeStamp) + "ms");
                         holder.set(HeldButton.NONE);
+                        CanvasActivity.this.rotation = (float) (currentTime - timeStamp) * RADS_PER_SEC / 1000f;
+                        Log.i("Rotation", "LEFT Rotated by " + CanvasActivity.this.rotation);
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
@@ -204,10 +229,12 @@ public class CanvasActivity extends AppCompatActivity {
             }
         });
         right.setOnTouchListener(new View.OnTouchListener() {
+            private long timeStamp;
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch(event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
+                        timeStamp = System.currentTimeMillis();
                         moveType.set(ScanType.ROTATION);
                         holder.set(HeldButton.RIGHT);
                         app.bluetooth.send("r");
@@ -215,7 +242,11 @@ public class CanvasActivity extends AppCompatActivity {
                         app.bluetooth.send("r");
                         return true;
                     case MotionEvent.ACTION_UP:
+                        long currentTime = System.currentTimeMillis();
+                        Log.i("Rotation", "RIGHT Rotated for " + (currentTime - timeStamp) + "ms");
                         holder.set(HeldButton.NONE);
+                        CanvasActivity.this.rotation = (float) (currentTime - timeStamp) * -RADS_PER_SEC / 1000f;
+                        Log.i("Rotation", "RIGHT Rotated by " + CanvasActivity.this.rotation);
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
@@ -316,7 +347,7 @@ public class CanvasActivity extends AppCompatActivity {
                     sweepInProgressDists.clear();
                     sweepInProgressAngles.clear();
                 } else if(code == 'V') {
-                    Log.i("CanvasActivity", "Value Message!");
+//                    Log.i("CanvasActivity", "Value Message!");
                     if(message.length < 5) {
                         Log.e("CanvasActivity", "Value message too short!");
                         return;
@@ -326,58 +357,141 @@ public class CanvasActivity extends AppCompatActivity {
                     byte msb = message[2];
                     distance += (lsb & 0xFF);
                     distance += ((msb << 8) & 0xFF00);
-                    sweepInProgressDists.add((float) distance);
+                    sweepInProgressDists.add((float) (distance+8));
 
                     int steps = 0;
                     lsb = message[3];
                     msb = message[4];
                     steps += (lsb & 0xFF);
                     steps += ((msb << 8) & 0xFF00);
-                    float angle = (((float) steps) - 36.0f) * 1.8f * 2.0f * (float) Math.PI / 360.0f;
+                    float angle = (((float) steps) - 136.0f) * 1.8f * 2.0f * (float) Math.PI / 360.0f;
                     sweepInProgressAngles.add(angle);
-                } else if(code == 'F') {
-                    float[] angles = new float[sweepInProgressAngles.size()];
-                    float[] dists = new float[sweepInProgressDists.size()];
-                    if(angles.length != dists.length) {
-                        Log.e("CanvasActivity", "# of angles != # of dists!");
-                    }
-                    for(int i = 0; i < angles.length; ++i) {
-                        angles[i] = sweepInProgressAngles.get(i);
-                        dists[i] = sweepInProgressDists.get(i);
-                    }
-                    if(moveType.get() == ScanType.LINEAR) {
-                        Log.i("CanvasActivity", "ScanType LINEAR");
-                        map.updateLin(angles, dists);
-                    } else if(moveType.get() == ScanType.ROTATION) {
-                        Log.i("CanvasActivity", "ScanType ROTATION");
-                        map.updateRot(angles, dists, 0 /* TODO: Turn hint*/);
-                    } else if(moveType.get() == ScanType.INITIAL) {
-                        Log.i("CanvasActivity", "ScanType INITIAL");
-                        map.initialScan(angles, dists);
-                    }
-                    List<mapping.MapSegment> segments = map.getSegments();
-                    for(int i = 0; i < segments.size(); ++i) {
-                        mapping.MapSegment segment = segments.get(i);
-                        drawView.addLine(new DrawView.Line(
-                                segment.origin.x,
-                                -segment.origin.y,
-                                segment.vec.x,
-                                -segment.vec.y
-                        ));
-                    }
-                    mapping.Vec pos = map.getPosition();
-                    drawView.setPoint(new DrawView.Point(pos.x, -pos.y));
-                    for(int i = 0; i < angles.length; ++i) {
-                        drawView.addPoint(new DrawView.Point(
-                                (float) Math.cos(angles[i]) * dists[i],
-                                (float) -Math.sin(angles[i]) * dists[i]
-                        ));
-                    }
+                } else {
+                    if (code == 'F') {
+                        float[] angles = new float[sweepInProgressAngles.size()];
+                        float[] dists = new float[sweepInProgressDists.size()];
+                        if (angles.length != dists.length) {
+                            Log.e("CanvasActivity", "# of angles != # of dists!");
+                        }
+                        int permission = ActivityCompat.checkSelfPermission(me, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+                        if (permission != PackageManager.PERMISSION_GRANTED) {
+                            // We don't have permission so prompt the user
+                            ActivityCompat.requestPermissions(
+                                    me,
+                                    PERMISSIONS_STORAGE,
+                                    WRITE_EXTERNAL_STORAGE
+                            );
+                        }
+                        permission = ActivityCompat.checkSelfPermission(me, Manifest.permission.READ_EXTERNAL_STORAGE);
+                        if (permission != PackageManager.PERMISSION_GRANTED) {
+                            // We don't have permission so prompt the user
+                            ActivityCompat.requestPermissions(
+                                    me,
+                                    PERMISSIONS_STORAGE,
+                                    READ_EXTERNAL_STORAGE
+                            );
+                        }
 
-                    drawView.invalidate();
-                } else if(code == 'T') {
+                        Log.i("CanvasActivity", "Storage state: " + Environment.getExternalStorageState());
+                        File externalStorage = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+                        File logDir = new File(externalStorage.getAbsolutePath() + "/log");
+                        Log.i("CanvasActivity", "External Storage: " + externalStorage.getAbsolutePath() + " exists: " + externalStorage.exists());
+                        if(!logDir.exists()) {
+                            if(!logDir.mkdirs()) {
+                                Log.i("CanvasActivity", "mkdirs fails even though file doesn't exist!");
+                            }
+                        }
+                        File logFile = new File(logDir, "log-" + System.currentTimeMillis() + ".csv");
+                        Log.i("CanvasActivity", "Log dir: " + logDir.getAbsolutePath() + " exists: " + logDir.exists());
+                        if(!logFile.exists()) {
+                            try {
+//                                logFile.mkdirs();
+                                logFile.createNewFile();
+                            } catch(Exception e) {
+                                Log.e("CanvasActivity", e.getMessage());
+                            }
+                        }
+                        Log.i("CanvasActivity", "Logging to file: " + logFile.getAbsolutePath() + " exists: " + logFile.exists());
+                        FileOutputStream fos = null;
+                        OutputStreamWriter writer = null;
+                        try {
+                            fos = new FileOutputStream(logFile);
+                            writer = new OutputStreamWriter(fos);
+                        } catch (Exception e) {
+                            Log.e("CanvasActivity", e.getMessage());
+                            e.printStackTrace();
+                        }
+                        for (int i = 0; i < angles.length; ++i) {
+                            angles[i] = sweepInProgressAngles.get(i);
+                            dists[i] = sweepInProgressDists.get(i);
+//                            Log.i("CanvasActivityData", angles[i] + ", " + dists[i]);
+                            try {
+                                if(writer != null) {
+                                    writer.write(angles[i] + "," + dists[i] + "\n");
+//                                    Log.i("CanvasActivity", "WRITING :: " + angles[i] + "," + dists[i]);
+                                }
+                            } catch(Exception e) {
+                                Log.e("CanvasActivity", "WRITING :: " + e.getMessage());
+                                e.printStackTrace();
+                            }
+                        }
+                        try {
+                            if(writer != null) {
+                                writer.flush();
+                            }
+                            if(fos != null) {
+                                fos.close();
+                            }
+//                            if(writer != null) {
+//                                writer.close();
+//                            }
+                        } catch(Exception e) {
+                            Log.e("CanvasActivity", "Closing: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                        if (moveType.get() == ScanType.LINEAR) {
+                            Log.i("CanvasActivity", "ScanType LINEAR");
+                            map.updateLin(angles, dists);
+                        } else if (moveType.get() == ScanType.ROTATION) {
+                            Log.i("CanvasActivity", "ScanType ROTATION");
+                            // NOTE: 220 degress / second of button hold
+                            map.updateRot(angles, dists, CanvasActivity.this.rotation);
+                            CanvasActivity.this.rotation = 0;
+                        } else if (moveType.get() == ScanType.INITIAL) {
+                            Log.i("CanvasActivity", "ScanType INITIAL");
+                            map.initialScan(angles, dists);
+                            app.mapInitialized = true;
+                        }
+                        drawView.clear();
+                        List<mapping.MapSegment> segments = map.getSegments();
+                        int currentSweep = map.getCurrentSweep();
+                        for (int i = 0; i < segments.size(); ++i) {
+                            mapping.MapSegment segment = segments.get(i);
+                            drawView.addLine(new DrawView.Line(
+                                    segment.origin.x,
+                                    -segment.origin.y,
+                                    segment.origin.x + segment.vec.x,
+                                    -(segment.origin.y + segment.vec.y)
+                            ), segment.created == currentSweep);
+                        }
+                        mapping.Vec pos = map.getPosition();
+                        float robotAngle = map.getAngle();
+                        drawView.setRobotAngle(robotAngle);
+                        drawView.setPoint(new DrawView.Point(pos.x, -pos.y));
+                        for (int i = 0; i < angles.length; ++i) {
+                            drawView.addPoint(new DrawView.Point(
+                                    (float) Math.cos(robotAngle + angles[i]) * dists[i] + pos.x,
+                                    -((float) Math.sin(robotAngle + angles[i]) * dists[i] + pos.y)
+                            ));
+                        }
 
-                } /*else if(code == 'I') {
+                        drawView.invalidate();
+
+                        float dimension = drawView.getMapSize();
+                        dimensions.setText("Map Dimensions: " + dimension + "cm X " + dimension + "cm");
+                    } else if (code == 'T') {
+
+                    } /*else if(code == 'I') {
                     float[] angles = new float[sweepInProgressAngles.size()];
                     float[] dists = new float[sweepInProgressDists.size()];
                     if(angles.length != dists.length) {
@@ -389,65 +503,66 @@ public class CanvasActivity extends AppCompatActivity {
                     }
                     map.initialScan(angles, dists);
                 }*/
+                }
                 if(false /* Start of sweep */) {
 
                 } else if(false /* End of sweep */) {
 
                 }
-                if(true)
-                    return;
-
-                if(message.length < 5) {
-                    Log.e("CanvasActivity", "Message too short!");
-                    return;
-                }
-                byte lsb = message[1];
-                byte msb = message[2];
-
-                Log.i("CanvasActivity", "bin lsb: " + String.format("%02X", lsb));
-                Log.i("CanvasActivity", "bin msb: " + String.format("%02X", msb));
-
-                int distance = 0;
-                distance += (lsb & 0xFF);
-                distance += ((msb << 8) & 0xFF00);
-
-                lsb = message[3];
-                msb = message[4];
-
-                int angle = 0;
-                angle += (lsb & 0xFF);
-                angle += ((msb << 8) & 0xFF00);
-
-                float realAngle = ((float) angle) / 10;
-
-                int x = (int) (Math.cos(realAngle) * ((float) distance));
-                int y = (int) (Math.sin(realAngle) * ((float) distance));
-
-                sweepInProgressDists.add((float) distance);
-                sweepInProgressAngles.add(realAngle);
-
-                drawView.clear();
-                drawView.addPoint(new DrawView.Point(-200, -200));
-                drawView.addPoint(new DrawView.Point(200, -200));
-                drawView.addPoint(new DrawView.Point(-200, 200));
-                drawView.addPoint(new DrawView.Point(200, 200));
-                drawView.addLine(new DrawView.Line(0, 0, x, y));
-
-                drawView.invalidate();
-
-                Log.i("CanvasActivity", "bin dist: " + String.format("%04X", distance));
-                Log.i("CanvasActivity", "Rotation int: " + angle);
-
-                String output = "LIDAR distance: " + distance + "cm";
-
-                Log.i("CanvasActivity", output);
-
-                lidarDistance.setText(output);
-
-                output = "Rotation: " + realAngle + " deg";
-
-                Log.i("CanvasActivity", output);
-                rotation.setText(output);
+//                if(true)
+//                    return;
+//
+//                if(message.length < 5) {
+//                    Log.e("CanvasActivity", "Message too short!");
+//                    return;
+//                }
+//                byte lsb = message[1];
+//                byte msb = message[2];
+//
+//                Log.i("CanvasActivity", "bin lsb: " + String.format("%02X", lsb));
+//                Log.i("CanvasActivity", "bin msb: " + String.format("%02X", msb));
+//
+//                int distance = 0;
+//                distance += (lsb & 0xFF);
+//                distance += ((msb << 8) & 0xFF00);
+//
+//                lsb = message[3];
+//                msb = message[4];
+//
+//                int angle = 0;
+//                angle += (lsb & 0xFF);
+//                angle += ((msb << 8) & 0xFF00);
+//
+//                float realAngle = ((float) angle) / 10;
+//
+//                int x = (int) (Math.cos(realAngle) * ((float) distance));
+//                int y = (int) (Math.sin(realAngle) * ((float) distance));
+//
+//                sweepInProgressDists.add((float) distance);
+//                sweepInProgressAngles.add(realAngle);
+//
+//                drawView.clear();
+//                drawView.addPoint(new DrawView.Point(-200, -200));
+//                drawView.addPoint(new DrawView.Point(200, -200));
+//                drawView.addPoint(new DrawView.Point(-200, 200));
+//                drawView.addPoint(new DrawView.Point(200, 200));
+////                drawView.addLine(new DrawView.Line(0, 0, x, y), false);
+//
+//                drawView.invalidate();
+//
+//                Log.i("CanvasActivity", "bin dist: " + String.format("%04X", distance));
+//                Log.i("CanvasActivity", "Rotation int: " + angle);
+//
+//                String output = "LIDAR distance: " + distance + "cm";
+//
+//                Log.i("CanvasActivity", output);
+//
+//                lidarDistance.setText(output);
+//
+//                output = "Rotation: " + realAngle + " deg";
+//
+//                Log.i("CanvasActivity", output);
+//                rotation.setText(output);
             }
         });
     }
