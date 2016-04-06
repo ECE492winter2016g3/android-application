@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.os.Bundle;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -79,6 +80,9 @@ public class DrawView extends View {
         public float scale(float input) {
             return ((input - domainMin) / (domainMax - domainMin)) * (rangeMax - rangeMin) + rangeMin;
         }
+        public String toString() {
+            return "Scale: (" + domainMin + ", " + domainMax + ") -> (" + rangeMin + ", " + rangeMax + ")";
+        }
         public void reset() {
             domainMin = 0;
             domainMax = 1;
@@ -99,10 +103,12 @@ public class DrawView extends View {
 
     public DrawView(Context context) {
         super(context);
+        Log.i("DrawView", "Constructor!");
         init();
     }
     public DrawView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        Log.i("DrawView", "Constructor!");
         init();
     }
     public void setPoint(Point point) {
@@ -198,8 +204,13 @@ public class DrawView extends View {
         int h = getHeight();
 
         float margin = 100;
-        xScale.setRange(margin, w - margin);
-        yScale.setRange(margin, h - margin);
+        if(w > h) {
+            xScale.setRange(margin, h - margin);
+        } else {
+            xScale.setRange(margin, w - margin);
+        }
+        Log.i("DrawView", "xScale: " + xScale);
+
 
 //        paint.setColor(Color.BLACK);
 //        paint.setStyle(Paint.Style.STROKE);

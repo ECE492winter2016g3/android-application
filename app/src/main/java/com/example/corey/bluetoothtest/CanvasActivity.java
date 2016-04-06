@@ -89,6 +89,7 @@ public class CanvasActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        Log.i("CanvasActivity", "onStart!");
         if(!app.mapInitialized) {
             Log.i("CanvasActivity", "Sending Init packets!");
             moveType.set(ScanType.INITIAL);
@@ -99,7 +100,14 @@ public class CanvasActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.i("CanvasActivity", "onDestroy!");
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.i("CanvasActivity", "onCreate!");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.canvas_activity);
         final CanvasActivity me = this;
