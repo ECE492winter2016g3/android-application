@@ -1,10 +1,14 @@
 package com.example.corey.bluetoothtest;
 
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
 import java.io.IOException;
@@ -23,6 +27,7 @@ import java.util.UUID;
  * Created by Corey on 01/03/2016.
  */
 public class BluetoothManager {
+
     private BluetoothAdapter adapter;
     private List<BluetoothDevice> devices;
 
@@ -48,6 +53,9 @@ public class BluetoothManager {
         messageHandler = new MessageHandler();
     }
 
+    public boolean startDiscovery() {
+        return adapter.startDiscovery();
+    }
 
     public void scan() {
         Set<BluetoothDevice> deviceSet = adapter.getBondedDevices();
@@ -62,6 +70,8 @@ public class BluetoothManager {
     }
 
     public boolean connect(int index) {
+        adapter.cancelDiscovery();
+
         BluetoothDevice device = devices.get(index);
 
         // Disconnect first in case we try to connect twice
@@ -69,19 +79,22 @@ public class BluetoothManager {
             disconnect();
         }
 
-
-
         try {
             socket = device.createInsecureRfcommSocketToServiceRecord(SPP_UUID);
 
             int retries = 0;
-            while(retries++ < 5) {
+            boolean success = false;
+            while(retries++ < 2) {
                 try {
                     socket.connect();
+                    success = true;
                     break;
                 } catch (IOException e) {
                     Log.i("BluetoothManager", "Connection attempt #" + retries + " failed!");
                 }
+            }
+            if(!success) {
+                return false;
             }
             Log.i("BluetoothManager", "Connection succeeded!");
             output = socket.getOutputStream();

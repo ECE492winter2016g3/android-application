@@ -12,6 +12,14 @@
     tools:context="com.example.corey.bluetoothtest.MainActivity"
     tools:showIn="@layout/activity_main">
 
+    <ProgressBar
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/progressBar"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true" />
+
     <ListView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -27,7 +35,8 @@
         android:id="@+id/refresh"
         android:layout_above="@+id/canvas"
         android:layout_alignParentStart="true"
-        android:layout_alignEnd="@+id/canvas" />
+        android:layout_alignEnd="@+id/canvas"
+        android:background="@android:drawable/btn_default" />
 
     <Button
         android:layout_width="wrap_content"
@@ -36,6 +45,7 @@
         android:id="@+id/canvas"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true" />
+        android:layout_alignParentEnd="true"
+        android:background="@android:drawable/btn_default" />
 
 </RelativeLayout>
