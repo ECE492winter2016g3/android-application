@@ -359,6 +359,10 @@ public class CanvasActivity extends AppCompatActivity {
                             dists[i] = sweepInProgressDists.get(i);
 //                            Log.i("CanvasActivityData", angles[i] + ", " + dists[i]);
                             try {
+                                // Discard any measurements of 8 cm - they are errors
+                                if(dists[i] - 8f < 0.5f) {
+                                    continue;
+                                }
                                 if(writer != null) {
                                     writer.write(angles[i] + "," + dists[i] + "\n");
 //                                    Log.i("CanvasActivity", "WRITING :: " + angles[i] + "," + dists[i]);
