@@ -171,13 +171,13 @@ public class CanvasActivity extends AppCompatActivity {
                         app.bluetooth.send("f");
                         app.bluetooth.send("f");
                         app.bluetooth.send("f");
-                        return true;
+                        return false;
                     case MotionEvent.ACTION_UP:
                         holder.set(HeldButton.NONE);
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
-                        return true;
+                        return false;
                 }
                 return false;
             }
@@ -192,13 +192,13 @@ public class CanvasActivity extends AppCompatActivity {
                         app.bluetooth.send("b");
                         app.bluetooth.send("b");
                         app.bluetooth.send("b");
-                        return true;
+                        return false;
                     case MotionEvent.ACTION_UP:
                         holder.set(HeldButton.NONE);
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
-                        return true;
+                        return false;
                 }
                 return false;
             }
@@ -216,7 +216,7 @@ public class CanvasActivity extends AppCompatActivity {
                         app.bluetooth.send("l");
                         app.bluetooth.send("l");
                         app.bluetooth.send("l");
-                        return true;
+                        return false;
                     case MotionEvent.ACTION_UP:
                         long currentTime = System.currentTimeMillis();
 
@@ -227,7 +227,7 @@ public class CanvasActivity extends AppCompatActivity {
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
-                        return true;
+                        return false;
                 }
                 return false;
             }
@@ -244,7 +244,7 @@ public class CanvasActivity extends AppCompatActivity {
                         app.bluetooth.send("r");
                         app.bluetooth.send("r");
                         app.bluetooth.send("r");
-                        return true;
+                        return false;
                     case MotionEvent.ACTION_UP:
                         long currentTime = System.currentTimeMillis();
                         Log.i("Rotation", "RIGHT Rotated for " + (currentTime - timeStamp) + "ms");
@@ -254,7 +254,7 @@ public class CanvasActivity extends AppCompatActivity {
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
-                        return true;
+                        return false;
                 }
                 return false;
             }

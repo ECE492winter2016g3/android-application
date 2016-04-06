@@ -6,14 +6,15 @@
         android:id="@+id/draw"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/dimensions" />
+        android:layout_above="@+id/dimensions"
+        android:layout_below="@+id/back" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Back"
         android:id="@+id/back"
-        android:layout_alignParentBottom="true"
+        android:layout_alignParentTop="true"
         android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true" />
 
@@ -31,8 +32,9 @@
         android:layout_height="wrap_content"
         android:text="Reverse"
         android:id="@+id/reverse"
-        android:layout_above="@+id/back"
-        android:layout_centerHorizontal="true" />
+        android:layout_alignParentBottom="true"
+        android:layout_alignEnd="@+id/forward"
+        android:background="@android:drawable/btn_default" />
 
     <Button
         android:layout_width="wrap_content"
@@ -40,22 +42,25 @@
         android:text="Forward"
         android:id="@+id/forward"
         android:layout_above="@+id/reverse"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:background="@android:drawable/btn_default" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Left"
         android:id="@+id/left"
-        android:layout_alignTop="@+id/reverse"
-        android:layout_toStartOf="@+id/reverse" />
+        android:layout_alignParentBottom="true"
+        android:layout_toStartOf="@+id/reverse"
+        android:background="@android:drawable/btn_default" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Right"
         android:id="@+id/right"
-        android:layout_above="@+id/back"
-        android:layout_toEndOf="@+id/reverse" />
+        android:layout_alignParentBottom="true"
+        android:layout_toEndOf="@+id/reverse"
+        android:background="@android:drawable/btn_default" />
 
 </RelativeLayout>
