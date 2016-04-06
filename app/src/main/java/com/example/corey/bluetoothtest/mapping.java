@@ -1,4 +1,4 @@
-package com.example.corey.bluetoothtest;
+ package com.example.corey.bluetoothtest;
 
 import android.util.Log;
 
@@ -14,7 +14,7 @@ public class mapping {
 	public static float BROAD_SIZE = 100.0f;
 
 	/* Variance in the lidar range from the true value is +- 1cm */
-	public static float LIDAR_VARIANCE = 4.0f;
+	public static float LIDAR_VARIANCE = 3.0f;
 
 	/* Max number of samples in a sweep by the sensor */
 	public static int SWEEP_COUNT = 180;
@@ -201,6 +201,7 @@ public class mapping {
 		}
 	}
 
+	public ArrayList<MapSegment> lastSegments;
 	/* Do feature extraction */
 	void featureExtract(
 			ArrayList<MapPoint> points, ArrayList<MapSegment> segments,
@@ -209,9 +210,13 @@ public class mapping {
 		// First, extract the global X/Y coordinates
 		ArrayList<Vec> pts = new ArrayList<Vec>();
 		for (int i = 0; i < angles.length; ++i) {
-			Vec v = mul(distances[i], Vec.fromAngle(angles[i] + robotAngle));
-			v.add(robotPosition);
-			pts.add(v);
+			// But ignore any that are very close to us, or very far away
+			// from us
+			if (distances[i] > 20.0f && distances[i] < 1000.0f) {
+				Vec v = mul(distances[i], Vec.fromAngle(angles[i] + robotAngle));
+				v.add(robotPosition);
+				pts.add(v);
+			}
 		}
 
 		// Ready the output
@@ -222,33 +227,41 @@ public class mapping {
 		int start_index = 0; // First index in the line segment
 		boolean start_is_in_segment = false; // First index was already used in a segment
 		float lastDifference = sub(pts.get(0), pts.get(1)).length();
-		for (int i = 1; i <= angles.length; ++i) {
+		for (int i = 1; i <= pts.size(); ++i) {
 			//std::cout << "Point " << i << " from start " << start_index << "\n";
 			// Use this point as the end point, starting at the first index, and
 			// see if all the other points are near the line segment (use
 			// perpendicular distance to the segment)
 			float thisDifference = 0.0f;
-			if (i < angles.length) {
+			float distanceAway = 0.0f;
+			if (i < pts.size()) {
 				thisDifference = sub(pts.get(i), pts.get(i-1)).length();
+				distanceAway = sub(pts.get(i), robotPosition).length();
 			}
 			boolean failed;
-			if (i == angles.length) {
+			if (i == pts.size()) {
 				// Final iteration, always fail
 				failed = true;
-			// } else if (thisDifference > 1.6*lastDifference
-			// 	|| thisDifference < 0.625*lastDifference) {
-			// 	// Not following a smooth wall
-			// 	failed = true;
-			} else if (thisDifference > 2.0f*LIDAR_VARIANCE) {
+				// } else if (thisDifference > 1.6*lastDifference
+				// 	|| thisDifference < 0.625*lastDifference) {
+				// 	// Not following a smooth wall
+				// 	failed = true;
+			} else if (thisDifference > 4*distanceAway*PI*2/200) {
 				// Points too spread out
 				failed = true;
 			} else {
 				// Normal iteration behavior
 				Vec u = sub(pts.get(i), pts.get(start_index));
 				u.normalize();
-				Vec t = sub(pts.get(i), robotPosition); // Direction from robot to edge
-				if (absangle_between(u, t) < 0.3) {
+				// Angle of edge towards robot being too small means the
+				// edge is too oblique to us to be reliable
+				Vec t = sub(pts.get(i), robotPosition);
+				float theta1 = absangle_between(u, t);
+				theta1 = Math.min(theta1, PI - theta1);
+				// Total angular sweep of edge must also be reasonable
+				if (theta1 < 0.3f) {
 					// Line seg is at too great an angle to us, don't use it
+					//System.out.printf("Failed due to angle");
 					failed = true;
 				} else {
 					failed = false;
@@ -273,7 +286,14 @@ public class mapping {
 			// On a fail, if we have a line segment of >3 points already, emit it
 			// Otherwise, emit the start_index point and advance start_index.
 			if (failed) {
-				if ((i - start_index) > 2) {
+				float segCandLen = sub(pts.get(i-1), pts.get(start_index)).length();
+				Vec a = sub(pts.get(i-1), robotPosition);
+				Vec b = sub(pts.get(start_index), robotPosition);
+				float totalAngle = absangle_between(a, b);
+				float c = sub(a, b).length() / (i-start_index-1);
+				if ((i - start_index) > 2 &&
+						segCandLen > 3.0f*LIDAR_VARIANCE &&
+						totalAngle > 0.08f) {
 					// Emit the points start_index up to i - 1
 					// (i is the index that we failed to extend to)
 					MapSegment seg = new MapSegment(currentSweep);
@@ -290,22 +310,34 @@ public class mapping {
 
 					// New start index is i *minus one*, because the end point
 					// of one segment can also be the start point of a new one
-					start_index = i - 1;
+					start_index = i;
 					start_is_in_segment = true;
 				} else if (start_is_in_segment) {
 					// Just advance, that point does not need to be emitted as it
 					// is already in a line segment
 					++start_index;
+					while (start_index < i) {
+						// Emit the start_index point individually and advance the
+						// start index by one.
+						MapPoint pt = new MapPoint();
+						pt.position = pts.get(start_index).copy();
+						points.add(pt);
+
+						// New start index one ahead
+						++start_index;
+					}
 					start_is_in_segment = false;
 				} else {
-					// Emit the start_index point individually and advance the
-					// start index by one.
-					MapPoint pt = new MapPoint();
-					pt.position = pts.get(start_index).copy();
-					points.add(pt);
+					while (start_index < i) {
+						// Emit the start_index point individually and advance the
+						// start index by one.
+						MapPoint pt = new MapPoint();
+						pt.position = pts.get(start_index).copy();
+						points.add(pt);
 
-					// New start index one ahead
-					++start_index;
+						// New start index one ahead
+						++start_index;
+					}
 					// start_is_in_segment = 0; -> already implied branch's conditions
 				}
 			} else {
@@ -316,6 +348,8 @@ public class mapping {
 		// Balance the last / first seg
 		if (segments.size() > 2)
 			balanceSegmentCorner(segments.get(segments.size()-1), segments.get(0));
+
+		lastSegments = segments;
 	}
 
 
@@ -522,7 +556,7 @@ public class mapping {
 					float dirlen = perplen / frac;
 
 					// Weight based on length and frac
-					float weight = frac;//* (to_match.vec.length() / longestSegLength);
+					float weight = 0.5f*frac + 0.5f*(to_match.vec.length() / longestSegLength);
 
 					// Note: When frac is small, dirlen will be large, and errors will be
 					// scaled up, so use frac as the weight of a measurement
@@ -604,7 +638,7 @@ public class mapping {
 	// Merge in a line segment adding it to the state
 	void mergeSegment(MapSegment seg) {
 		// Try to find a colinear line segment to merge with
-		 boolean merged = false;
+		boolean merged = false;
 		for (MapSegment cand: allSegments) {
 			// First, point the two segments in the same direction
 			if (dot(cand.vec, seg.vec) < 0.0f) {
@@ -647,9 +681,25 @@ public class mapping {
 			float overlapSlop = 2*LIDAR_VARIANCE;
 			boolean projectionDoesOverlap =
 					(p2 > -overlapSlop && p2 < tlen+overlapSlop) ||
-					(p1 > -overlapSlop && p1 < tlen+overlapSlop);
+							(p1 > -overlapSlop && p1 < tlen+overlapSlop);
+			// Is one line mostly within the other projection
+			float perpDist = 0;
+			if ((p2 > -overlapSlop && p2 < tlen+overlapSlop) &&
+					(p1 > -overlapSlop && p1 < tlen+overlapSlop)) {
+				// p2 dist
+				perpDist = Math.min(d1, d2);
+			} else if (p2 > -overlapSlop && p2 < tlen+overlapSlop) {
+				perpDist = d2;
+			} else {
+				// p1 dist
+				perpDist = d1;
+			}
+			boolean isCloseSimilar =
+					projectionDoesOverlap &&
+							(perpDist < 4*LIDAR_VARIANCE) &&
+							(angleDiff < 0.3);
 			//
-			if ((projectionDoesOverlap && (isTouching || relativelyClose)) || doesIntersect) {
+			if ((projectionDoesOverlap && (isTouching || relativelyClose)) || doesIntersect || isCloseSimilar) {
 				// We have an intersection. Add the points from seg to
 				// cand and re-regress it.
 				cand.pointList.addAll(cand.pointList.size()-1, seg.pointList);
@@ -880,6 +930,9 @@ public class mapping {
 		mergeGeometry(points, segments);
 	}
 
+	public Vec lastPosDelta = new Vec(0, 0);
+	public float lastRotDelta = 0;
+
 	public void updateLin(float angles[], float distances[]) {
 		++currentSweep;
 		// First step is feature extraction, we need to break down the
@@ -900,12 +953,16 @@ public class mapping {
 		float oldTheta = robotAngle;
 		float rotChange = rotationTweak(segments);
 		updateFeatures(oldPos, oldTheta, points, segments);
+		lastRotDelta = robotAngle - oldTheta;
 		//
 		oldPos = robotPosition.copy();
 		oldTheta = robotAngle;
 		if (linearmotion_process(segments, rotChange) == 0) {
 			// If we could process the linear motion, update the map
 			updateFeatures(oldPos, oldTheta, points, segments);
+			//
+			lastPosDelta = sub(robotPosition, oldPos);
+			lastRotDelta += robotAngle - oldTheta;
 			//
 			mergeGeometry(points, segments);
 		} else {
@@ -938,6 +995,9 @@ public class mapping {
 		if (angularmotionProcess(segments, turnHint) == 0) {
 			// Success, update map
 			updateFeatures(oldPos, oldTheta, points, segments);
+			//
+			lastPosDelta = new Vec(0, 0);
+			lastRotDelta = robotAngle - oldTheta;
 			//
 			mergeGeometry(points, segments);
 		} else {
