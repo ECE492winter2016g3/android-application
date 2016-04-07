@@ -45,6 +45,7 @@ public class CanvasActivity extends AppCompatActivity {
     private final Holder<ScanType> moveType = new Holder<>(ScanType.INITIAL);
 //    private final Holder<Integer> rotation = new Holder<>(0);
     float rotation = 0;
+    float direction = 0;
 
     private int logCount = 0;
     private File logDir = null;
@@ -185,6 +186,7 @@ public class CanvasActivity extends AppCompatActivity {
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
+                        CanvasActivity.this.direction = 1;
                         return false;
                 }
                 return false;
@@ -206,6 +208,7 @@ public class CanvasActivity extends AppCompatActivity {
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
                         app.bluetooth.send("s");
+                        CanvasActivity.this.direction = -1;
                         return false;
                 }
                 return false;
@@ -396,7 +399,7 @@ public class CanvasActivity extends AppCompatActivity {
                         }
                         if (moveType.get() == ScanType.LINEAR) {
                             Log.i("CanvasActivity", "ScanType LINEAR");
-                            map.updateLin(angles, dists);
+                            map.updateLin(angles, dists, CanvasActivity.this.direction);
                         } else if (moveType.get() == ScanType.ROTATION) {
                             Log.i("CanvasActivity", "ScanType ROTATION");
                             // NOTE: 220 degress / second of button hold
