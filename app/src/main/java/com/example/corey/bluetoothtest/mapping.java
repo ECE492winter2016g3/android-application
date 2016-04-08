@@ -20,7 +20,7 @@ public class mapping {
 	public static int SWEEP_COUNT = 180;
 
 	/* Maximum amount the robot can turn by during linear movement (1 / 30th turn | 12 deg) */
-	public static float TURN_TWEAK = ((float)Math.PI * 2.0f / 30.0f);
+	public static float TURN_TWEAK = ((float)Math.PI * 2.0f / 20.0f);
 
 	public static class Vec {
 		public static Vec fromAngle(float theta) {
@@ -447,6 +447,11 @@ public class mapping {
 				longestSeg = to_match.vec.length();
 		}
 
+		// Histogram
+		ArrayList<HistEntry> histogram = new ArrayList<HistEntry>();
+		int hist_capacity = 10;
+		float histDelta = 0.1f;
+
 		// 
 		float totalWeight = 0;
 		float totalDelta = 0;
@@ -484,17 +489,69 @@ public class mapping {
 						if (theta1 > PI) theta1 -= 2*PI;
 						float dtheta = theta2 - theta1;
 						if (dtheta > PI) dtheta = 2*PI - dtheta;
-						System.out.println("Dtheta: " + dtheta + " weight " + weight);
-						totalWeight += weight;
-						totalDelta += weight*dtheta;
+
+						// Add to histogram
+						HistEntry best = null;
+						float bestDiff = 10000.0f;
+						boolean added = false;
+						for (HistEntry entry: histogram) {
+							float del = entry.diff - dtheta;
+							if (Math.abs(del) < histDelta) {
+								entry.weight += weight;
+								entry.total += dtheta*weight;
+								entry.count += 1;
+								added = true;
+								break;
+							}
+						}
+						if (!added) {
+							if (histogram.size() < hist_capacity) {
+								HistEntry ent = new HistEntry();
+								ent.count = 1;
+								ent.diff = dtheta;
+								ent.weight = weight;
+								ent.total = dtheta*weight;
+								histogram.add(ent);
+
+							} else {
+								// Find worst weight and kick out
+								HistEntry target = null;
+								float bestWeight = 10000.0f;
+								for (HistEntry ent: histogram) {
+									if (ent.weight < bestWeight) {
+										bestWeight = ent.weight;
+										target = ent;
+									}
+								}
+								if (bestWeight < weight) {
+									target.weight = weight;
+									target.count = 1;
+									target.diff = dtheta;
+									target.total = dtheta*weight;
+								}
+							}
+						}
 					}
 				}
 			}
 		}
-		float delta = totalDelta / totalWeight;
-		robotAngle += delta;
-		System.out.println("Tweak angle: " + delta);
-		return delta;
+		if (histogram.size() > 0) {
+			float bestDelta = 0;
+			float bestWeight = 0;
+			for (HistEntry hist: histogram) {
+				float delta = hist.total / hist.weight;
+				if (hist.weight > bestWeight) {
+					bestWeight = hist.weight;
+					bestDelta = delta;
+				}
+			}
+			float delta = bestDelta;
+			robotAngle += delta;
+			System.out.println("Tweak angle: " + delta);
+			return delta;
+		} else {
+			return 0;
+		}
 	}
 
 	// Tweak the rotation of the robot by a small amount to best match
@@ -622,8 +679,10 @@ public class mapping {
 					float lTo = dot(to_match.vec, perpAxis);
 					float pMatch = dot(sub(a_match.origin, robotPosition), perpAxis);
 					float lMatch = dot(a_match.vec, perpAxis);
-					if ((pMatch > pTo && pMatch < (pTo + lTo)) ||
-							(pTo > pMatch && pTo < pMatch + lMatch)) {
+					if ((pMatch > Math.min(pTo, pTo + lTo) && pMatch < Math.max(pTo, pTo + lTo)) ||
+							(pTo > Math.min(pMatch, pMatch + lMatch) && pTo < Math.max(pMatch, pMatch + lMatch))) {
+//					if ((pMatch > pTo && pMatch < (pTo + lTo)) ||
+//							(pTo > pMatch && pTo < pMatch + lMatch)) {
 						// All good
 					} else {
 						continue;
@@ -1059,23 +1118,24 @@ public class mapping {
 		oldTheta = robotAngle;
 		if (linearmotion_process(segments, rotChange, hint) == 0) {
 			// If we could process the linear motion, update the map
-			//robotAngle += PI/2;
 			updateFeatures(oldPos, oldTheta, points, segments);
-			mergeGeometry(points, segments);
+			robotAngle += PI/2;
+			//mergeGeometry(points, segments);
 			//
-/*
+
 			oldTheta = robotAngle;
 			oldPos = robotPosition.copy();
 			if (linearmotion_process(segments, 0, 0) == 0) {
-				robotAngle -= PI/2;
+
 				updateFeatures(oldPos, oldTheta, points, segments);
+				robotAngle -= PI/2;
 				//
 				mergeGeometry(points, segments);
 			} else {
 				System.out.println("Failed to update linear");
 				deleteFeatures(points, segments);				
 			}
-*/
+
 		} else {
 			System.out.println("Failed to update linear");
 			deleteFeatures(points, segments);
